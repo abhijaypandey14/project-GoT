@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduwerks | The Maester's Trial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { --gold: #c5a059; --iron: #1a1a1a; }
+        body { font-family: 'Merriweather', serif; background-color: #050505; color: #d1d5db; margin: 0; overflow-x: hidden; min-height: 100vh; }
+        .got-font { font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* UI GLASS */
+        .dragon-glass { background: rgba(10, 10, 10, 0.9); backdrop-filter: blur(12px); border: 1px solid #333; box-shadow: 0 0 40px rgba(0,0,0,0.8); position: relative; }
+        .dragon-glass::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(to bottom, var(--gold), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; opacity: 0.5; }
+        
+        /* OPTIONS */
+        .option-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #333; background: #0a0a0a; }
+        .option-btn:hover { border-color: var(--gold); background: rgba(197, 160, 89, 0.1); transform: translateX(10px); }
+        .option-btn.selected { background: var(--gold); color: black; border-color: var(--gold); font-weight: bold; }
+        
+        /* SNOW */
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .snowflake { position: absolute; top: -10px; background: white; border-radius: 50%; opacity: 0.8; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+
+        /* ANALYSIS ANIMATION */
+        .scan-line { height: 2px; width: 100%; background: var(--gold); position: absolute; top: 0; left: 0; animation: scan 2s infinite; box-shadow: 0 0 10px var(--gold); opacity: 0; }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        
+        /* PROGRESS BAR */
+        .progress-fill { transition: width 0.5s ease-out; box-shadow: 0 0 15px rgba(197, 160, 89, 0.5); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen relative p-4">
+
+    <div class="snow-container" id="snow"></div>
+
+    <div class="w-full max-w-3xl dragon-glass rounded-lg p-10 relative z-10 overflow-hidden" id="quiz-container">
+        
+        <div class="flex justify-between items-end mb-8 border-b border-[#333] pb-4">
+            <div>
+                <h1 class="text-3xl text-white got-font mb-1">The Maester's Trial</h1>
+                <p class="text-xs text-[#c5a059] uppercase tracking-[0.2em]">Determining Your Clearance Level</p>
+            </div>
+            <div class="text-right">
+                <div class="text-4xl font-bold text-white got-font" id="question-number">01</div>
+                <div class="text-xs text-gray-500 uppercase">of 10</div>
+            </div>
+        </div>
+
+        <div class="w-full h-1 bg-[#222] mb-10 rounded-full overflow-hidden">
+            <div class="h-full bg-[#c5a059] progress-fill w-0" id="progress-bar"></div>
+        </div>
+
+        <div id="question-box" class="mb-10 min-h-[100px]">
+            <h2 class="text-xl text-gray-200 leading-relaxed font-serif" id="question-text">
+                Initializing assessment protocol...
+            </h2>
+        </div>
+
+        <div class="grid gap-4 mb-10" id="options-container">
+            </div>
+
+        <div class="flex justify-between items-center">
+            <div class="text-xs text-gray-600 font-mono" id="status-text">SYSTEM: WAITING FOR INPUT</div>
+            <button onclick="nextQuestion()" id="next-btn" class="bg-[#c5a059] text-black px-10 py-3 font-bold hover:bg-white transition-all text-xs uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(197,160,89,0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                Confirm Selection
+            </button>
+        </div>
+
+        <div id="analysis-overlay" class="absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center hidden">
+            <div class="scan-line"></div>
+            <div class="w-24 h-24 border-2 border-[#c5a059] rounded-full flex items-center justify-center mb-6 animate-pulse">
+                <i class="fas fa-brain text-[#c5a059] text-4xl"></i>
+            </div>
+            <h2 class="text-2xl text-white got-font mb-2">Analyzing Patterns</h2>
+            <p class="text-xs text-[#c5a059] font-mono" id="analysis-text">Calculating Weights...</p>
+        </div>
+
+    </div>
+
+    <div id="result-card" class="hidden w-full max-w-2xl dragon-glass rounded-lg p-12 text-center relative z-20">
+        <div class="mb-8">
+            <i class="fas fa-crown text-6xl text-[#c5a059] mb-4 drop-shadow-[0_0_15px_rgba(197,160,89,0.8)]"></i>
+            <h2 class="text-4xl text-white got-font mb-2">Assessment Complete</h2>
+            <div class="h-[1px] w-20 bg-[#c5a059] mx-auto mt-4"></div>
+        </div>
+        
+        <p class="text-gray-400 mb-2 font-mono text-xs uppercase tracking-widest">Your Assigned Rank</p>
+        <h3 class="text-5xl font-bold text-white got-font mb-6" id="final-rank">Archmaester</h3>
+        <p class="text-lg text-gray-300 italic mb-10 max-w-lg mx-auto" id="final-desc">
+            "Your command of the deep neural arts is exceptional. The Citadel opens its restricted archives to you."
+        </p>
+
+        <button onclick="enterCitadel()" class="border border-[#c5a059] text-[#c5a059] px-12 py-4 font-bold hover:bg-[#c5a059] hover:text-black transition-all text-sm uppercase tracking-[0.3em]">
+            Enter The Citadel
+        </button>
+    </div>
+
+    <script>
+        // --- DATASET: 10 CURATED QUESTIONS ---
+        const questions = [
+            // 1-3: Foundations (Basic)
+            { q: "What implies 'Supervised Learning'?", o: ["Data has labels", "Data has no labels", "Agent learns from environment", "Data is unstructured"], a: 0 },
+            { q: "Which library is standard for dataframes?", o: ["NumPy", "Pandas", "Matplotlib", "Seaborn"], a: 1 },
+            { q: "What defines 'Overfitting'?", o: ["Model is too simple", "Model memorizes noise", "Model ignores data", "Data is missing"], a: 1 },
+            
+            // 4-7: Core ML (Intermediate)
+            { q: "What does Gradient Descent do?", o: ["Increases Loss", "Optimizes Weights", "Cleans Data", "Plots Graphs"], a: 1 },
+            { q: "Bias vs Variance trade-off relates to?", o: ["Under/Overfitting", "Speed/Memory", "CPU/GPU", "Front/Backend"], a: 0 },
+            { q: "In CNNs, what does Pooling do?", o: ["Increases dimensions", "Reduces dimensions", "Adds color", "Flips image"], a: 1 },
+            { q: "Standard activation for hidden layers?", o: ["Sigmoid", "ReLU", "Softmax", "Linear"], a: 1 },
+
+            // 8-10: Deep Learning (Advanced)
+            { q: "Key innovation of Transformers?", o: ["Convolutions", "Self-Attention", "Recurrence", "Pooling"], a: 1 },
+            { q: "What solves the Vanishing Gradient?", o: ["Sigmoid", "Residual Connections (ResNet)", "More layers", "Smaller learning rate"], a: 1 },
+            { q: "What is Transfer Learning?", o: ["Moving data", "Using pre-trained weights", "Switching GPUs", "Porting code"], a: 1 }
+        ];
+
+        // --- GAME LOGIC ---
+        let currentIdx = 0;
+        let score = 0;
+        let selectedOption = null;
+
+        const qText = document.getElementById('question-text');
+        const qNum = document.getElementById('question-number');
+        const optContainer = document.getElementById('options-container');
+        const pBar = document.getElementById('progress-bar');
+        const nextBtn = document.getElementById('next-btn');
+        const statusText = document.getElementById('status-text');
+
+        function loadQuestion() {
+            const data = questions[currentIdx];
+            qText.innerText = data.q;
+            qNum.innerText = (currentIdx + 1).toString().padStart(2, '0');
+            
+            // Update Progress
+            const pct = ((currentIdx) / questions.length) * 100;
+            pBar.style.width = `${pct}%`;
+
+            // Reset UI
+            optContainer.innerHTML = '';
+            selectedOption = null;
+            nextBtn.disabled = true;
+            nextBtn.classList.add('opacity-50');
+            statusText.innerText = "SYSTEM: WAITING FOR INPUT";
+
+            // Generate Options
+            data.o.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 text-sm text-gray-300 rounded";
+                btn.innerHTML = `<span class="text-[#c5a059] font-bold mr-3">${String.fromCharCode(65+idx)}.</span> ${opt}`;
+                btn.onclick = () => selectOption(idx, btn);
+                optContainer.appendChild(btn);
+            });
+        }
+
+        function selectOption(idx, btn) {
+            const all = document.querySelectorAll('.option-btn');
+            all.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            selectedOption = idx;
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('opacity-50');
+            statusText.innerText = "SYSTEM: INPUT RECEIVED. READY TO COMMIT.";
+        }
+
+        function nextQuestion() {
+            if (selectedOption === questions[currentIdx].a) {
+                score++;
+            }
+
+            currentIdx++;
+
+            if (currentIdx < questions.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            // Hide Quiz, Show Analysis
+            document.getElementById('quiz-container').style.display = 'none';
+            const overlay = document.getElementById('analysis-overlay');
+            overlay.classList.remove('hidden');
+            
+            const analysisText = document.getElementById('analysis-text');
+            const steps = ["Parsing Answers...", "Calculating Neural Weights...", "Determining Potential...", "Accessing Citadel Records..."];
+            
+            let step = 0;
+            const interval = setInterval(() => {
+                if(step < steps.length) {
+                    analysisText.innerText = steps[step];
+                    step++;
+                } else {
+                    clearInterval(interval);
+                    showResult();
+                }
+            }, 800);
+        }
+
+        function showResult() {
+            document.getElementById('analysis-overlay').classList.add('hidden');
+            document.getElementById('result-card').classList.remove('hidden');
+            
+            const rankTitle = document.getElementById('final-rank');
+            const rankDesc = document.getElementById('final-desc');
+            
+            // Logic for Rank (Based on 10 Questions)
+            if (score >= 9) { // 9 or 10 Correct
+                rankTitle.innerText = "Grand Maester";
+                rankDesc.innerText = "Your knowledge rivals the high lords of the Citadel. You are ready to lead the deployment wars.";
+                rankTitle.style.color = "#c5a059"; // Gold
+            } else if (score >= 6) { // 6 to 8 Correct
+                rankTitle.innerText = "Forged Maester";
+                rankDesc.innerText = "You have forged your chain in the fires of logic. A strong foundation, but winter is still coming.";
+                rankTitle.style.color = "#e2e8f0"; // Silver
+            } else { // 0 to 5 Correct
+                rankTitle.innerText = "Acolyte";
+                rankDesc.innerText = "Your journey has just begun. The Night's Watch needs you to study the scrolls further.";
+                rankTitle.style.color = "#94a3b8"; // Grey
+            }
+        }
+
+        function enterCitadel() {
+            window.location.href = 'index.html';
+        }
+
+        // --- SNOWFALL INIT ---
+        const snowContainer = document.getElementById('snow');
+        for(let i=0; i<50; i++) {
+            const snow = document.createElement('div');
+            snow.className = 'snowflake';
+            snow.style.left = Math.random() * 100 + '%';
+            snow.style.width = Math.random() * 5 + 2 + 'px';
+            snow.style.height = snow.style.width;
+            snow.style.animationDuration = Math.random() * 5 + 5 + 's';
+            snow.style.animationDelay = Math.random() * 5 + 's';
+            snowContainer.appendChild(snow);
+        }
+
+        // Start
+        loadQuestion();
+
+    </script>
+</body>
+</html>
