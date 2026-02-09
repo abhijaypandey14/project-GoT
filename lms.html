@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduwerks | The Interactive Citadel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --gold: #b08d48;
+            --ink: #2D2D2D;
+            --parchment: #F4F1EA;
+            --border: #E5E1D8;
+        }
+        
+        body { 
+            font-family: 'Merriweather', serif; 
+            background-color: var(--parchment); 
+            color: var(--ink); 
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .got-font { font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* SIDEBAR */
+        .sidebar { background: white; border-right: 1px solid var(--border); transition: all 0.3s ease; }
+        .nav-item { transition: all 0.2s ease; border-left: 3px solid transparent; }
+        .nav-item:hover, .nav-item.active { background: rgba(176, 141, 72, 0.05); border-left-color: var(--gold); color: var(--gold); }
+        .nav-item.active i { color: var(--gold); }
+
+        /* CARDS */
+        .dashboard-card {
+            background: white; border: 2px dashed #E5E7EB; border-radius: 12px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dashboard-card:hover { border-color: var(--gold); transform: translateY(-5px) scale(1.01); box-shadow: 0 25px 50px -12px rgba(176, 141, 72, 0.25); }
+
+        .video-card {
+            background: white; border-radius: 12px; overflow: hidden; border: 1px solid var(--border);
+            transition: all 0.3s ease-out; position: relative; cursor: pointer;
+        }
+        .video-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); border-color: var(--gold); z-index: 10; }
+        .video-thumbnail { height: 150px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .video-thumbnail img, .video-thumbnail i { transition: transform 0.5s ease; }
+        .video-card:hover .video-thumbnail i { transform: scale(1.2); }
+        .play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; backdrop-filter: blur(2px); }
+        .video-card:hover .play-overlay { opacity: 1; }
+
+        .module-card {
+            background: white; border: 1px solid var(--border); border-radius: 12px; padding: 2rem; text-align: center;
+            transition: all 0.3s ease; cursor: pointer;
+        }
+        .module-card:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 15px 35px rgba(176, 141, 72, 0.15); }
+        .module-card.locked { opacity: 0.6; cursor: not-allowed; filter: grayscale(100%); }
+        .module-card.locked:hover { transform: none; box-shadow: none; border-color: var(--border); }
+
+        /* ANIMATIONS */
+        .hidden-section { display: none !important; }
+        
+        .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeInUp { 
+            from { opacity: 0; transform: translateY(30px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .pulse-slow { animation: pulseSlow 3s infinite; }
+        @keyframes pulseSlow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* TOAST NOTIFICATION */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px;
+            position: fixed; z-index: 50; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.5s, bottom 0.5s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+
+        /* SNOW */
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.4; }
+        .snowflake { position: absolute; top: -10px; background: #d1d5db; border-radius: 50%; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh); } }
+    </style>
+</head>
+<body class="flex">
+
+    <div class="snow-container" id="snow"></div>
+
+    <div id="toast" class="got-font border border-[#b08d48]"><i class="fas fa-scroll mr-2 text-[#b08d48]"></i> <span id="toast-msg">Message</span></div>
+
+    <aside class="sidebar w-72 h-screen fixed left-0 top-0 hidden lg:flex flex-col z-20">
+        <div class="p-10 border-b border-[#E5E1D8]">
+            <div class="flex items-center gap-3 text-[#b08d48] cursor-pointer hover:scale-105 transition-transform" onclick="location.reload()">
+                <i class="fas fa-university text-2xl"></i>
+                <h1 class="text-gray-900 got-font text-xl font-black tracking-widest">Citadel</h1>
+            </div>
+        </div>
+        <nav class="flex-1 p-6 space-y-2">
+            <div onclick="switchTab(this, 'dashboard')" class="nav-item active flex items-center gap-4 text-gray-500 font-bold text-xs uppercase tracking-widest p-4 rounded cursor-pointer">
+                <i class="fas fa-th-large text-lg"></i> Dashboard
+            </div>
+            <div onclick="switchTab(this, 'scrolls')" class="nav-item flex items-center gap-4 text-gray-500 font-bold text-xs uppercase tracking-widest p-4 rounded cursor-pointer">
+                <i class="fas fa-scroll text-lg"></i> My Scrolls
+            </div>
+            <div onclick="switchTab(this, 'labs')" class="nav-item flex items-center gap-4 text-gray-500 font-bold text-xs uppercase tracking-widest p-4 rounded cursor-pointer">
+                <i class="fas fa-flask text-lg"></i> Labs
+            </div>
+        </nav>
+        <div class="p-8 border-t border-[#E5E1D8] group cursor-pointer hover:bg-gray-50 transition-colors">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-[#b08d48] text-white flex items-center justify-center font-bold shadow-lg group-hover:scale-110 transition-transform">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-900 got-font" id="sidebar-name">User</p>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase" id="sidebar-rank">Acolyte</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 lg:ml-72 p-8 md:p-20 relative z-10">
+        
+        <header class="mb-12 flex justify-between items-end fade-in-up" style="animation-delay: 0.1s;">
+            <div>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-3">
+                    <span class="w-8 h-[1px] bg-gray-300"></span> The Maester's Path
+                </p>
+                <h1 class="text-4xl md:text-5xl text-gray-800 got-font leading-tight">
+                    <span id="greeting-time">Welcome</span>, <span class="text-[#b08d48]" id="user-greeting">User</span>
+                </h1>
+            </div>
+            <div class="hidden md:flex gap-8">
+                <div class="text-right">
+                    <p class="text-[10px] uppercase font-bold text-gray-400">XP Gained</p>
+                    <p class="text-2xl font-black text-gray-800 got-font counter" data-target="1250">0</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] uppercase font-bold text-gray-400">Streak</p>
+                    <p class="text-2xl font-black text-[#b08d48] got-font"><span class="counter" data-target="4">0</span> Days</p>
+                </div>
+            </div>
+        </header>
+
+        <div id="dashboard-view" class="fade-in-up" style="animation-delay: 0.2s;">
+            <div class="dashboard-card p-16 text-center cursor-pointer group bg-white relative overflow-hidden" onclick="enterModule()">
+                <div class="absolute inset-0 bg-[#b08d48] opacity-0 group-hover:opacity-5 transition-opacity duration-500"></div>
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-8 group-hover:bg-[#b08d48] group-hover:text-white transition-all duration-300 shadow-xl group-hover:scale-110">
+                    <i class="fas fa-microchip text-4xl text-gray-400 group-hover:text-white"></i>
+                </div>
+                
+                <h2 class="text-3xl text-gray-800 got-font mb-4 tracking-wide group-hover:text-[#b08d48] transition-colors">Machine Learning Module</h2>
+                <p class="text-gray-500 italic font-serif text-lg mb-10">"Click to unseal the grand archives of artificial intelligence."</p>
+                
+                <button class="bg-[#b08d48] text-white px-12 py-4 rounded font-bold uppercase tracking-[0.2em] text-xs hover:bg-[#8e6e33] hover:shadow-lg transition-all transform group-hover:-translate-y-1">
+                    Enter Archives
+                </button>
+            </div>
+        </div>
+
+        <div id="loading-view" class="hidden-section flex flex-col items-center justify-center py-32">
+            <div class="w-20 h-20 border-4 border-[#b08d48]/20 border-t-[#b08d48] rounded-full animate-spin mb-8 shadow-2xl"></div>
+            <h2 class="text-2xl text-gray-800 got-font animate-pulse">Unsealing Archives...</h2>
+            <p class="text-xs text-gray-400 uppercase tracking-widest mt-2">Decrypting Scrolls</p>
+        </div>
+
+        <div id="modules-view" class="hidden-section">
+            <button onclick="location.reload()" class="mb-8 text-gray-400 hover:text-[#b08d48] text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+                <i class="fas fa-arrow-left"></i> Return to Dashboard
+            </button>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="module-card group fade-in-up" style="animation-delay: 0.1s;" onclick="showVideoLibrary()">
+                    <div class="w-16 h-16 bg-[#b08d48]/10 rounded-full flex items-center justify-center mx-auto mb-6 text-[#b08d48] group-hover:bg-[#b08d48] group-hover:text-white transition-all"><i class="fas fa-play text-2xl"></i></div>
+                    <h3 class="text-xl text-gray-800 got-font mb-3">Courses</h3>
+                    <p class="text-sm text-gray-500 mb-6">Visual lectures from the Grand Maesters.</p>
+                    <span class="text-[10px] font-bold text-[#b08d48] uppercase tracking-widest border-b border-[#b08d48] pb-1 group-hover:border-transparent transition-all">Open Library</span>
+                </div>
+
+                <div class="module-card locked fade-in-up" style="animation-delay: 0.2s;" onclick="showToast('This section is sealed by the Citadel.')">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="fas fa-vial text-2xl"></i></div>
+                    <h3 class="text-xl text-gray-400 got-font mb-3">Quizzes</h3>
+                    <p class="text-sm text-gray-400 mb-6">Test your logic against the oracle.</p>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-lock"></i> Locked</span>
+                </div>
+
+                <div class="module-card locked fade-in-up" style="animation-delay: 0.3s;" onclick="showToast('You must reach Level 5 to unlock Scrolls.')">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400"><i class="fas fa-feather-alt text-2xl"></i></div>
+                    <h3 class="text-xl text-gray-400 got-font mb-3">Notes</h3>
+                    <p class="text-sm text-gray-400 mb-6">Written scrolls and documentation.</p>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"><i class="fas fa-lock"></i> Locked</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="video-library-view" class="hidden-section">
+            <button onclick="returnToModules()" class="mb-10 text-gray-400 hover:text-[#b08d48] text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors">
+                <i class="fas fa-arrow-left"></i> Back to Modules
+            </button>
+            
+            <div class="space-y-12">
+                <div class="fade-in-up" style="animation-delay: 0.1s;">
+                    <h3 class="text-2xl text-gray-800 got-font mb-6 border-l-4 border-gray-300 pl-4 flex items-center gap-3">
+                        Acolyte <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-sans font-bold">BEGINNER</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="video-card group" onclick="openPlayer('PLblh5JKOoLUICTaGLRoHQDuF_7q2GfuJF', 'StatQuest: Machine Learning')">
+                            <div class="video-thumbnail bg-blue-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-chart-bar text-4xl text-blue-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">StatQuest</h4><p class="text-xs text-gray-500">Josh Starmer</p></div>
+                        </div>
+                        <div class="video-card group" onclick="openPlayer('PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi', '3Blue1Brown: Neural Networks')">
+                            <div class="video-thumbnail bg-purple-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-brain text-4xl text-purple-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-purple-600 transition-colors">3Blue1Brown</h4><p class="text-xs text-gray-500">Neural Networks</p></div>
+                        </div>
+                        <div class="video-card group" onclick="openPlayer('PL8dPuuaLjXtO65LeD2p4_Sb5XQ51par_b', 'CrashCourse: AI')">
+                            <div class="video-thumbnail bg-orange-800 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-bolt text-4xl text-orange-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-orange-600 transition-colors">CrashCourse</h4><p class="text-xs text-gray-500">Artificial Intelligence</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fade-in-up" style="animation-delay: 0.2s;">
+                    <h3 class="text-2xl text-gray-800 got-font mb-6 border-l-4 border-[#b08d48] pl-4 flex items-center gap-3">
+                        Forged <span class="text-xs bg-[#b08d48] text-white px-2 py-1 rounded font-sans font-bold">INTERMEDIATE</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="video-card group" onclick="openPlayer('PLkDaE6sCZn6FNC6YRfRQc_FbeQrF8BwGI', 'Andrew Ng: Machine Learning')">
+                            <div class="video-thumbnail bg-green-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-chalkboard-teacher text-4xl text-green-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-green-600 transition-colors">Andrew Ng</h4><p class="text-xs text-gray-500">ML Specialization</p></div>
+                        </div>
+                        <div class="video-card group" onclick="openPlayer('PLWKjhJtqVAblStefaz_YOVpDWqcRScc2s', 'freeCodeCamp: Full Course')">
+                            <div class="video-thumbnail bg-gray-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-code text-4xl text-gray-500 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-gray-600 transition-colors">freeCodeCamp</h4><p class="text-xs text-gray-500">Deep Learning</p></div>
+                        </div>
+                        <div class="video-card group" onclick="openPlayer('PLZbbT5o_s2xq7LwI2y8_QtvuXZedL6tQU', 'deeplizard: Deep Learning')">
+                            <div class="video-thumbnail bg-pink-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-dragon text-4xl text-pink-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-pink-600 transition-colors">deeplizard</h4><p class="text-xs text-gray-500">Neural Networks</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fade-in-up" style="animation-delay: 0.3s;">
+                    <h3 class="text-2xl text-gray-800 got-font mb-6 border-l-4 border-black pl-4 flex items-center gap-3">
+                        Grand Maester <span class="text-xs bg-black text-white px-2 py-1 rounded font-sans font-bold">ADVANCED</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="video-card group" onclick="openPlayer('PLtBw6njQRU-rwp5__7C0oIVt26ZgjG9NI', 'MIT: Deep Learning')">
+                            <div class="video-thumbnail bg-red-900 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-university text-4xl text-red-300 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-red-600 transition-colors">MIT OpenCourseWare</h4><p class="text-xs text-gray-500">Deep Learning</p></div>
+                        </div>
+                        <div class="video-card group" onclick="openPlayer('PLoROMvodv4rNyWOpJg_Yh4NSqI4Z4vOYy', 'Stanford CS229')">
+                            <div class="video-thumbnail bg-red-950 group-hover:scale-105 transition-transform duration-500"><i class="fas fa-graduation-cap text-4xl text-red-400 opacity-50"></i><div class="play-overlay"><i class="fas fa-play text-white text-3xl drop-shadow-lg"></i></div></div>
+                            <div class="p-6"><h4 class="font-bold text-gray-800 mb-1 group-hover:text-red-900 transition-colors">Stanford CS229</h4><p class="text-xs text-gray-500">Machine Learning</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // 1. User Name & Rank
+            const name = localStorage.getItem('eduwerks_user') || 'User';
+            const rank = localStorage.getItem('eduwerks_rank') || 'Acolyte';
+            
+            // Format name to uppercase for display
+            document.getElementById('user-greeting').innerText = name.toUpperCase();
+            document.getElementById('sidebar-name').innerText = name.toUpperCase();
+            document.getElementById('sidebar-rank').innerText = rank;
+
+            // 2. Time-Based Greeting
+            const hour = new Date().getHours();
+            let greeting = "Welcome";
+            if (hour < 12) greeting = "Good Morning";
+            else if (hour < 18) greeting = "Good Afternoon";
+            else greeting = "Good Evening";
+            document.getElementById('greeting-time').innerText = greeting;
+
+            // 3. Animate Counters
+            const counters = document.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const speed = 200; // The lower the slower
+                const increment = target / speed;
+
+                const updateCount = () => {
+                    const count = +counter.innerText;
+                    if (count < target) {
+                        counter.innerText = Math.ceil(count + increment);
+                        setTimeout(updateCount, 20);
+                    } else {
+                        counter.innerText = target.toLocaleString();
+                    }
+                };
+                updateCount();
+            });
+        });
+
+        // --- NAVIGATION ---
+        function enterModule() {
+            showToast("Unsealing Archives...");
+            document.getElementById('dashboard-view').classList.add('hidden-section');
+            document.getElementById('loading-view').classList.remove('hidden-section');
+            
+            // Artificial Delay for effect
+            setTimeout(() => {
+                document.getElementById('loading-view').classList.add('hidden-section');
+                document.getElementById('modules-view').classList.remove('hidden-section');
+            }, 1200);
+        }
+
+        function showVideoLibrary() {
+            document.getElementById('modules-view').classList.add('hidden-section');
+            document.getElementById('video-library-view').classList.remove('hidden-section');
+            showToast("Library Accessed");
+        }
+
+        function returnToModules() {
+            document.getElementById('video-library-view').classList.add('hidden-section');
+            document.getElementById('modules-view').classList.remove('hidden-section');
+        }
+
+        function openPlayer(id, title) {
+            showToast("Launching Cinema Mode...");
+            setTimeout(() => {
+                window.location.href = `video_player.html?id=${id}&title=${encodeURIComponent(title)}`;
+            }, 500);
+        }
+
+        // --- UI UTILITIES ---
+        function switchTab(el, tabName) {
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                item.classList.replace('text-[#b08d48]', 'text-gray-500'); // Reset color
+            });
+            
+            // Add active class to clicked item
+            el.classList.add('active');
+            el.classList.replace('text-gray-500', 'text-[#b08d48]'); // Set gold color
+
+            if(tabName === 'dashboard') location.reload();
+            else showToast(`${tabName.charAt(0).toUpperCase() + tabName.slice(1)} is under construction.`);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            document.getElementById("toast-msg").innerText = message;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // --- SNOWFALL ---
+        const snow = document.getElementById('snow');
+        for(let i=0; i<30; i++){
+            const s = document.createElement('div');
+            s.className = 'snowflake';
+            s.style.left = Math.random() * 100 + '%';
+            s.style.width = Math.random() * 4 + 2 + 'px';
+            s.style.height = s.style.width;
+            s.style.animationDuration = Math.random() * 5 + 10 + 's';
+            s.style.opacity = Math.random() * 0.4;
+            snow.appendChild(s);
+        }
+    </script>
+    
+</body>
+</html>

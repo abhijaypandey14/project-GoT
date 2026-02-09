@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduwerks | The Maester's Trial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* --- THEME --- */
+        :root { --gold: #c5a059; --iron: #1a1a1a; }
+        
+        body { 
+            font-family: 'Merriweather', serif; 
+            background-color: #050505; 
+            color: #d1d5db; 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .got-font { font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* SNOW */
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .snowflake { position: absolute; top: -10px; background: white; border-radius: 50%; opacity: 0.8; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+
+        /* 3D GLASS CONTAINER */
+        .perspective-container { perspective: 1500px; z-index: 10; }
+        
+        .dragon-glass { 
+            background: rgba(10, 10, 10, 0.95); 
+            border: 1px solid #333; 
+            box-shadow: 0 0 60px rgba(0,0,0,0.9); 
+            position: relative; 
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+        
+        .dragon-glass::after { 
+            content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; 
+            background: linear-gradient(to bottom, var(--gold), transparent); 
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); 
+            -webkit-mask-composite: xor; mask-composite: exclude; 
+            pointer-events: none; opacity: 0.6; z-index: 1; 
+        }
+
+        /* LAYERING FIX */
+        .content-layer { position: relative; z-index: 20; }
+
+        /* UTILS */
+        .hidden-section { display: none !important; opacity: 0; }
+        .fade-in { animation: fadeIn 0.8s forwards; display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* QUIZ UI */
+        .option-btn { transition: all 0.2s; border: 1px solid #333; background: #0f0f0f; cursor: pointer; }
+        .option-btn:hover { border-color: var(--gold); background: rgba(197, 160, 89, 0.15); transform: translateX(5px); }
+        .option-btn.selected { background: var(--gold); color: black; border-color: var(--gold); font-weight: bold; }
+        
+        .scan-line { height: 2px; width: 100%; background: var(--gold); position: absolute; top: 0; left: 0; animation: scan 2s infinite; box-shadow: 0 0 10px var(--gold); opacity: 0; }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 50% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        /* MUSIC PULSE */
+        #music-btn.playing { animation: pulse-gold 2s infinite; border-color: var(--gold); box-shadow: 0 0 20px rgba(197,160,89,0.4); }
+        @keyframes pulse-gold { 50% { box-shadow: 0 0 30px rgba(197,160,89,0.8); } }
+
+        /* CHARTS */
+        .radar-poly { fill: rgba(197, 160, 89, 0.2); stroke: var(--gold); stroke-width: 2; stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: all 2s ease-out; }
+        .active .radar-poly { stroke-dashoffset: 0; }
+    </style>
+</head>
+<body class="p-4 overflow-hidden relative">
+
+    <audio id="bg-music" loop>
+        <source src="https://ia800707.us.archive.org/24/items/GameOfThronesThemeSong/Game%20Of%20Thrones%20Theme%20Song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="fixed bottom-10 right-10 z-[100]">
+        <button onclick="toggleMusic()" id="music-btn" class="w-16 h-16 rounded-full bg-black border-2 border-gray-600 flex items-center justify-center text-gray-400 hover:border-[#c5a059] hover:text-[#c5a059] transition-all duration-300 shadow-2xl cursor-pointer pointer-events-auto">
+            <i class="fas fa-bullhorn text-xl"></i>
+        </button>
+    </div>
+
+    <div class="fixed inset-0 pointer-events-none z-0" id="snow"></div>
+
+    <div class="perspective-container w-full max-w-5xl flex justify-center">
+        <div id="main-card" class="w-full dragon-glass rounded-lg p-8 md:p-14 relative z-10 min-h-[650px] flex flex-col justify-center transform-style-3d">
+            
+            <div id="briefing-view" class="fade-in text-center content-layer">
+                <div class="mb-10">
+                    <i class="fas fa-scroll text-5xl text-[#c5a059] mb-6 drop-shadow-[0_0_10px_rgba(197,160,89,0.5)]"></i>
+                    <h1 class="text-4xl md:text-5xl text-white got-font mb-4">The Maester's Decree</h1>
+                    <div class="h-[1px] w-32 bg-[#c5a059] mx-auto opacity-50"></div>
+                </div>
+
+                <div class="h-16 mb-8">
+                    <p class="text-lg text-gray-300 italic max-w-2xl mx-auto leading-relaxed" id="typewriter"></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 text-left">
+                    <div class="border border-[#333] bg-[#0f0f0f] p-5 rounded hover:border-[#c5a059] transition-colors group cursor-default">
+                        <h3 class="text-white got-font mb-1 group-hover:text-[#c5a059]">Acolyte</h3>
+                        <p class="text-xs text-gray-500 font-mono">Score: 0 - 5</p>
+                    </div>
+                    <div class="border border-[#333] bg-[#0f0f0f] p-5 rounded hover:border-[#c5a059] transition-colors border-t-2 border-t-gray-500 group cursor-default">
+                        <h3 class="text-white got-font mb-1 group-hover:text-[#c5a059]">Forged</h3>
+                        <p class="text-xs text-gray-500 font-mono">Score: 6 - 8</p>
+                    </div>
+                    <div class="border border-[#333] bg-[#0f0f0f] p-5 rounded hover:border-[#c5a059] transition-colors border-t-2 border-t-[#c5a059] group cursor-default">
+                        <h3 class="text-white got-font mb-1 group-hover:text-[#c5a059]">Grand Maester</h3>
+                        <p class="text-xs text-gray-500 font-mono">Score: 9 - 10</p>
+                    </div>
+                </div>
+
+                <button onclick="startTrial()" class="relative z-50 cursor-pointer group inline-flex items-center justify-center px-12 py-4 font-bold text-black transition-all bg-[#c5a059] hover:bg-white uppercase tracking-[0.2em] got-font shadow-[0_0_20px_rgba(197,160,89,0.3)]">
+                    <span>Commence The Trial</span>
+                    <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </div>
+
+            <div id="quiz-view" class="hidden-section w-full max-w-2xl mx-auto content-layer">
+                <div id="loading-state" class="text-center py-20">
+                    <div class="w-16 h-16 border-4 border-[#c5a059]/20 border-l-[#c5a059] rounded-full animate-spin mx-auto mb-6"></div>
+                    <h2 class="text-white got-font text-xl animate-pulse">Consulting The Oracle...</h2>
+                    <p class="text-xs text-gray-500 mt-2 font-mono">Forging questions via Neural Link</p>
+                </div>
+
+                <div id="quiz-content" class="hidden-section">
+                    <div class="flex justify-between items-end mb-8 border-b border-[#333] pb-4">
+                        <div><h2 class="text-2xl text-white got-font">Assessment</h2><p class="text-xs text-[#c5a059] tracking-[0.2em]">Neural Logic</p></div>
+                        <div class="text-right"><div class="text-3xl font-bold text-white got-font" id="q-num">01</div><div class="text-xs text-gray-500">of 10</div></div>
+                    </div>
+                    <div class="w-full h-1 bg-[#222] mb-10 rounded-full overflow-hidden"><div class="h-full bg-[#c5a059] transition-all duration-500 w-0" id="progress-bar"></div></div>
+                    <div class="min-h-[80px] mb-8"><h3 class="text-xl text-gray-200 font-serif leading-relaxed transition-opacity duration-300" id="q-text"></h3></div>
+                    <div class="grid gap-4 mb-10" id="options-box"></div>
+                    <div class="flex justify-between items-center">
+                        <div class="text-xs text-gray-600 font-mono" id="status-text">AWAITING INPUT</div>
+                        <button onclick="nextQuestion()" id="next-btn" class="bg-[#c5a059] text-black px-8 py-3 font-bold hover:bg-white transition-all text-xs uppercase tracking-[0.2em] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer pointer-events-auto">Confirm</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="analysis-view" class="hidden-section absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center text-center content-layer">
+                <div class="scan-line"></div>
+                <i class="fas fa-brain text-[#c5a059] text-6xl mb-6 animate-pulse"></i>
+                <h2 class="text-3xl text-white got-font mb-2">Analyzing Patterns</h2>
+                <p class="text-sm text-[#c5a059] font-mono" id="analysis-text">Calculating Weights...</p>
+            </div>
+
+            <div id="report-view" class="hidden-section w-full content-layer">
+                <div class="text-center mb-8 border-b border-[#333] pb-6">
+                    <h2 class="text-4xl text-white got-font mb-2">Strategic Dossier</h2>
+                    <div class="text-[#c5a059] text-xs uppercase tracking-[0.3em] mb-4">Analysis Complete</div>
+                    <h3 class="text-5xl font-bold text-white got-font" id="final-rank">Computing...</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="border border-[#333] bg-[#050505] p-6 rounded flex flex-col items-center justify-center">
+                        <h4 class="text-xs text-gray-500 uppercase tracking-widest mb-4">Skill Hex</h4>
+                        
+                        <svg viewBox="0 0 300 300" class="w-full max-w-[250px]" id="radar-svg">
+                            <g stroke="#333" stroke-width="1" fill="none">
+                                <polygon points="150,30 254,90 254,210 150,270 46,210 46,90"></polygon>
+                                <line x1="150" y1="150" x2="150" y2="30"></line><line x1="150" y1="150" x2="254" y2="90"></line>
+                                <line x1="150" y1="150" x2="254" y2="210"></line><line x1="150" y1="150" x2="150" y2="270"></line>
+                                <line x1="150" y1="150" x2="46" y2="210"></line><line x1="150" y1="150" x2="46" y2="90"></line>
+                            </g>
+                            <polygon id="radar-poly" points="150,150 150,150 150,150 150,150 150,150 150,150" class="radar-poly"></polygon>
+                            <text x="150" y="20" text-anchor="middle" fill="#555" font-size="10">LOGIC</text>
+                            <text x="270" y="90" text-anchor="middle" fill="#555" font-size="10">MATH</text>
+                            <text x="270" y="220" text-anchor="middle" fill="#555" font-size="10">CODE</text>
+                            <text x="150" y="290" text-anchor="middle" fill="#555" font-size="10">DATA</text>
+                            <text x="30" y="220" text-anchor="middle" fill="#555" font-size="10">ARCH</text>
+                            <text x="30" y="90" text-anchor="middle" fill="#555" font-size="10">DEBUG</text>
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4 class="text-white got-font mb-4 text-sm">Recommended Path</h4>
+                        <ul class="space-y-3" id="curriculum-list"></ul>
+                        <div class="mt-6 p-4 bg-[#111] border-l-2 border-[#c5a059] text-xs text-gray-400 italic">
+                            "<span id="ai-comment">Analysis pending...</span>"
+                        </div>
+                        <button onclick="window.location.href='lms.html'" class="w-full mt-6 border border-[#c5a059] text-[#c5a059] py-3 font-bold hover:bg-[#c5a059] hover:text-black transition-all text-xs uppercase tracking-[0.2em] cursor-pointer pointer-events-auto">
+                            Enter The Citadel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ======================= API CONFIG =======================
+        const API_KEY = "AIzaSyCU0bcsIIzBqHQ7s79gWKdSnBBoJtLKMIc"; 
+        // ==========================================================
+
+        let questions = [], currentIdx = 0, score = 0, selectedOption = null;
+
+        // --- FULL FALLBACK DATASET (10 QUESTIONS) ---
+        // Used if API fails, ensuring the quiz always works.
+        const fallbackQuestions = [
+            { q: "What implies 'Supervised Learning'?", o: ["Labels", "No Labels", "Reinforcement", "Clustering"], a: 0 },
+            { q: "Standard library for dataframes?", o: ["NumPy", "Pandas", "Matplotlib", "Seaborn"], a: 1 },
+            { q: "What defines 'Overfitting'?", o: ["Model too simple", "Memorizing noise", "Missing data", "Underfitting"], a: 1 },
+            { q: "What does Gradient Descent do?", o: ["Maximize Loss", "Optimize Weights", "Plot Graphs", "Delete Data"], a: 1 },
+            { q: "Activation function for output probabilities?", o: ["ReLU", "Sigmoid", "Softmax", "Tanh"], a: 2 },
+            { q: "What is 'Dropout'?", o: ["Stopping early", "Ignoring neurons", "Lost connection", "Deleting rows"], a: 1 },
+            { q: "What is a Tensor?", o: ["2D Matrix", "CPU Type", "N-dim Array", "A database"], a: 2 },
+            { q: "CNNs are best for?", o: ["Text", "Audio", "Images", "Tables"], a: 2 },
+            { q: "What handles sequential data?", o: ["CNN", "RNN", "K-Means", "PCA"], a: 1 },
+            { q: "Purpose of Validation Set?", o: ["Training", "Final Test", "Hyperparameter Tuning", "Backup"], a: 2 }
+        ];
+
+        // --- TYPEWRITER ---
+        const introText = "You stand at the gates. The High AI will forge 10 Unique Questions to analyze your neural patterns.";
+        let charI = 0;
+        function typeWriter() {
+            if (charI < introText.length) {
+                document.getElementById("typewriter").innerHTML += introText.charAt(charI);
+                charI++;
+                setTimeout(typeWriter, 30);
+            }
+        }
+        setTimeout(typeWriter, 500);
+
+        // --- NAVIGATION ---
+        function startTrial() {
+            document.getElementById('briefing-view').classList.add('hidden-section');
+            document.getElementById('briefing-view').classList.remove('fade-in');
+            
+            const quizView = document.getElementById('quiz-view');
+            quizView.classList.remove('hidden-section');
+            quizView.classList.add('fade-in');
+            
+            // Set style display manually to override hidden-section just in case
+            quizView.style.display = 'block';
+
+            fetchAIQuestions();
+        }
+
+        // --- MUSIC ---
+        const audio = document.getElementById("bg-music");
+        const musicBtn = document.getElementById("music-btn");
+        let isPlaying = false;
+        function toggleMusic() {
+            if (isPlaying) { audio.pause(); musicBtn.classList.remove("playing"); }
+            else { audio.play().catch(e=>console.log(e)); musicBtn.classList.add("playing"); }
+            isPlaying = !isPlaying;
+        }
+
+        // --- 3D TILT ---
+        document.addEventListener('mousemove', (e) => {
+            const card = document.getElementById('main-card');
+            const x = (window.innerWidth / 2 - e.pageX) / 100;
+            const y = (window.innerHeight / 2 - e.pageY) / 100;
+            card.style.transform = `rotateY(${-x}deg) rotateX(${y}deg)`;
+        });
+
+        // --- API LOGIC ---
+        async function fetchAIQuestions() {
+            const prompt = `Generate 10 unique multiple choice questions about Machine Learning. Return ONLY raw JSON array. Format: [{"q":"Question","o":["A","B","C","D"],"a":0}]`;
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                let rawText = data.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                questions = JSON.parse(rawText);
+                
+                // Validate length
+                if(!questions || questions.length < 10) throw new Error("Incomplete Data");
+                
+                renderQuiz();
+            } catch (error) {
+                console.error("API Failed, using fallback", error); 
+                questions = fallbackQuestions; 
+                renderQuiz();
+            }
+        }
+
+        function renderQuiz() {
+            document.getElementById('loading-state').style.display = 'none';
+            const content = document.getElementById('quiz-content');
+            content.style.display = 'block';
+            content.classList.remove('hidden-section');
+            content.classList.add('fade-in');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            // Check if we hit the limit or array end
+            if(currentIdx >= 10 || !questions[currentIdx]) return finishQuiz();
+            
+            const data = questions[currentIdx];
+            const qText = document.getElementById('q-text');
+            
+            qText.style.opacity = 0;
+            setTimeout(() => { qText.innerText = data.q; qText.style.opacity = 1; }, 200);
+            
+            document.getElementById('q-num').innerText = (currentIdx + 1).toString().padStart(2, '0');
+            document.getElementById('progress-bar').style.width = `${((currentIdx) / 10) * 100}%`;
+            
+            const box = document.getElementById('options-box');
+            box.innerHTML = '';
+            
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.disabled = true;
+            nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            selectedOption = null;
+            document.getElementById('status-text').innerText = "AWAITING INPUT";
+            
+            data.o.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 text-sm text-gray-300 rounded";
+                btn.innerHTML = `<span class="text-[#c5a059] font-bold mr-3">${String.fromCharCode(65+idx)}.</span> ${opt}`;
+                btn.onclick = () => selectOption(idx, btn);
+                box.appendChild(btn);
+            });
+        }
+
+        function selectOption(idx, btn) {
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedOption = idx;
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('status-text').innerText = "INPUT RECEIVED";
+        }
+
+        function nextQuestion() {
+            if (selectedOption === questions[currentIdx].a) score++;
+            currentIdx++;
+            if (currentIdx < 10) loadQuestion(); else finishQuiz();
+        }
+
+        function finishQuiz() {
+            document.getElementById('quiz-view').style.display = 'none';
+            const analysis = document.getElementById('analysis-view');
+            analysis.style.display = 'flex';
+            analysis.classList.remove('hidden-section');
+            
+            const txt = document.getElementById('analysis-text');
+            const steps = ["Parsing Answers...", "Calculating Neural Weights...", "Generating Dossier..."];
+            let step = 0;
+            const interval = setInterval(() => {
+                if(step < steps.length) { txt.innerText = steps[step]; step++; }
+                else { clearInterval(interval); generateReport(); }
+            }, 800);
+        }
+
+        function generateReport() {
+            document.getElementById('analysis-view').style.display = 'none';
+            const reportView = document.getElementById('report-view');
+            reportView.style.display = 'block';
+            reportView.classList.remove('hidden-section');
+            reportView.classList.add('fade-in');
+
+            // STATS CALC
+            const pct = (score / 10);
+            let rank = "Acolyte", color = "#94a3b8", comment = "Foundations needed.";
+            let curriculum = ["Intro to Python", "Linear Algebra", "Supervised Learning"];
+            
+            let radius = 40 + (pct * 60); 
+            // Radar Chart Logic
+            let points = `150,${150-radius} ${150+(radius*0.86)},${150-(radius*0.5)} ${150+(radius*0.86)},${150+(radius*0.5)} 150,${150+radius} ${150-(radius*0.86)},${150+(radius*0.5)} ${150-(radius*0.86)},${150-(radius*0.5)}`;
+
+            if (score >= 9) {
+                rank = "Grand Maester"; color = "#c5a059";
+                comment = "Your command of the deep neural arts is exceptional.";
+                curriculum = ["Transformers", "Deployment", "Replication"];
+            } else if (score >= 6) {
+                rank = "Forged Maester"; color = "#e2e8f0";
+                comment = "Strong foundations. Winter is coming, study deeper.";
+                curriculum = ["Neural Networks", "Hyperparameters", "Computer Vision"];
+            }
+
+            // Save Rank to Local Storage for LMS
+            localStorage.setItem('eduwerks_rank', rank);
+
+            document.getElementById('final-rank').innerText = rank;
+            document.getElementById('final-rank').style.color = color;
+            document.getElementById('ai-comment').innerText = comment;
+
+            // Animate Chart
+            setTimeout(() => {
+                document.getElementById('radar-poly').setAttribute('points', points);
+                document.getElementById('radar-svg').classList.add('active');
+            }, 100);
+
+            const list = document.getElementById('curriculum-list');
+            list.innerHTML = "";
+            curriculum.forEach(item => {
+                const li = document.createElement('li');
+                li.className = "flex items-center gap-3 text-sm text-gray-400 p-3 border border-[#333] bg-[#050505] rounded";
+                li.innerHTML = `<i class="fas fa-check-circle text-[#c5a059]"></i> ${item}`;
+                list.appendChild(li);
+            });
+        }
+
+        // --- SNOW ---
+        const snowContainer = document.getElementById('snow');
+        for(let i=0; i<50; i++){
+            const s = document.createElement('div'); s.className='snowflake';
+            s.style.left=Math.random()*100+'%'; s.style.width=Math.random()*5+2+'px'; s.style.height=s.style.width;
+            s.style.animationDuration=Math.random()*5+5+'s'; s.style.animationDelay=Math.random()*5+'s';
+            snowContainer.appendChild(s);
+        }
+    </script>
+</body>
+</html>
