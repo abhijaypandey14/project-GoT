@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduwerks | The Gatekeeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Merriweather:ital,wght@0,300;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { --gold: #c5a059; --iron: #1a1a1a; }
+        body { font-family: 'Merriweather', serif; background-color: #050505; color: #d1d5db; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .got-font { font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.05em; }
+        
+        /* SNOW */
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .snowflake { position: absolute; top: -10px; background: white; border-radius: 50%; opacity: 0.8; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(360deg); } }
+
+        /* FORM STYLES */
+        .input-field:focus ~ label, .input-field:not(:placeholder-shown) ~ label { top: -20px; font-size: 0.75rem; color: var(--gold); }
+        .login-card { background: rgba(10, 10, 10, 0.9); border: 1px solid #333; box-shadow: 0 0 50px rgba(0,0,0,0.9); position: relative; z-index: 10; animation: fadeUp 1s ease-out; }
+        .login-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(to bottom, var(--gold), transparent); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; opacity: 0.5; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        #music-btn.playing { animation: pulse-gold 2s infinite; border-color: var(--gold); box-shadow: 0 0 20px rgba(197,160,89,0.4); }
+        @keyframes pulse-gold { 50% { box-shadow: 0 0 30px rgba(197,160,89,0.8); } }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="https://ia800707.us.archive.org/24/items/GameOfThronesThemeSong/Game%20Of%20Thrones%20Theme%20Song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="fixed bottom-10 right-10 z-[100]">
+        <button onclick="toggleMusic()" id="music-btn" class="w-16 h-16 rounded-full bg-black border-2 border-gray-600 flex items-center justify-center text-gray-400 hover:border-[#c5a059] hover:text-[#c5a059] transition-all duration-300">
+            <i class="fas fa-bullhorn text-xl"></i>
+        </button>
+    </div>
+
+    <div class="snow-container" id="snow"></div>
+
+    <div class="w-full max-w-md p-10 login-card relative">
+        <a href="index.html" class="absolute top-6 right-6 text-gray-500 hover:text-[#c5a059] transition-colors text-sm uppercase tracking-widest">
+            <i class="fas fa-arrow-left mr-2"></i> Retreat
+        </a>
+
+        <div class="text-center mb-10">
+            <div class="w-20 h-20 border border-[#c5a059] rounded-full flex items-center justify-center mx-auto mb-6 bg-black shadow-[0_0_20px_rgba(197,160,89,0.3)]">
+                <i class="fas fa-key text-[#c5a059] text-3xl"></i>
+            </div>
+            <h2 class="text-3xl text-white got-font mb-2">Gatekeeper</h2>
+            <p class="text-xs text-gray-500 uppercase tracking-[0.2em]">Identify Yourself</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); alert('The Gate Opens...'); window.location.href='index.html';" class="space-y-8">
+            <div class="relative group">
+                <input type="email" required class="input-field w-full bg-transparent border-b border-gray-700 text-white py-2 outline-none focus:border-[#c5a059] transition-colors placeholder-transparent" placeholder="Email" id="email">
+                <label for="email" class="absolute left-0 top-2 text-gray-500 text-sm transition-all duration-300 pointer-events-none uppercase tracking-widest font-bold">House Sigil / Email</label>
+            </div>
+
+            <div class="relative group">
+                <input type="password" required class="input-field w-full bg-transparent border-b border-gray-700 text-white py-2 outline-none focus:border-[#c5a059] transition-colors placeholder-transparent" placeholder="Password" id="password">
+                <label for="password" class="absolute left-0 top-2 text-gray-500 text-sm transition-all duration-300 pointer-events-none uppercase tracking-widest font-bold">Secret Word</label>
+            </div>
+
+            <button type="submit" class="w-full bg-[#c5a059] text-black font-bold py-4 mt-6 hover:bg-white transition-all uppercase tracking-[0.2em] got-font shadow-lg">
+                Open The Gates
+            </button>
+
+            <div class="text-center mt-6">
+                <a href="#" class="text-xs text-gray-600 hover:text-[#c5a059] uppercase tracking-widest border-b border-transparent hover:border-[#c5a059] transition-all">Forgot your oath?</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const audio = document.getElementById("bg-music");
+        const musicBtn = document.getElementById("music-btn");
+        let isPlaying = false;
+        function toggleMusic() {
+            if (isPlaying) { audio.pause(); musicBtn.classList.remove("playing"); }
+            else { audio.play().catch(e=>console.log(e)); musicBtn.classList.add("playing"); }
+            isPlaying = !isPlaying;
+        }
+
+        const snowContainer = document.getElementById('snow');
+        for(let i=0;i<50;i++){
+            const s=document.createElement('div'); s.className='snowflake';
+            s.style.left=Math.random()*100+'%'; s.style.width=Math.random()*5+2+'px'; s.style.height=s.style.width;
+            s.style.animationDuration=Math.random()*5+5+'s'; s.style.animationDelay=Math.random()*5+'s';
+            snowContainer.appendChild(s);
+        }
+    </script>
+</body>
+</html>
